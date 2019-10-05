@@ -1,75 +1,71 @@
-#create css file for the project.py file and put it in a STATIC #Folder so flask can automatically look for ikt
+#create css file for the catalog.py file and put it in a STATIC #Folder so flask can automatically look for ikt
+
+.navbar {
+
+    -webkit-box-shadow: 0 0 150px 0 #999;
+
+    -moz-box-shadow: 0 0 150px 0 #999;
+
+    box-shadow: 0 0 150px 0 #999;
+
+}
+
+
 
 body {
-    font-family: sans-serif;
-    background-color: #333333
+
+    background: blue;
+
 }
 
-h1,
-h2,
-h3,
-h4 {
-    color: #ffffff;
+
+
+.text-and-icon {
+
+    margin-right: 9px;
+
 }
 
-h1,
-h2 {
-    font-family: 'georgia', serif;
-    margin: 0;
+
+
+.sections {
+
+    margin-top: 6%;
+
 }
 
-h1 {
-    border-bottom: 2px solid #eee;
+
+
+.login-box {
+
+    margin-top: 200px;
+
+    height: 250px;
+
+    box-shadow: None;
+
+    transition: box-shadow 400ms;
+
 }
 
-h2 {
-    font-size: 1.2em;
-}
 
-p,
-dd,
-dt {
-    color: #cccccc;
-}
 
-a {
-    text-decoration: none;
-    color: #ffffcc;
-    font-size: .75em;
-}
+/*
 
-.pane {
-    position: absolute;
-    left: 25%;
-    border: 2px solid;
-    border-radius: 25px;
-    padding: 5px;
-    margin: 5px;
-    border-color: #999999;
-    background-color: #333333
-}
+.login-box:hover {
 
-.header {
-    left: 50%;
-    text-align: center;
-}
+    -webkit-box-shadow: 0px 0px 15px 2px rgba(0,0,0,0.37);
 
-.name {
-    width: 50%;
+    box-shadow: 0px 0px 15px 2px rgba(0,0,0,0.37);
+
+}*/
+
+
+
+.container .google-box {
+
     display: inline-block;
-    float: left;
-}
 
-.description {}
+    text-align: center;
 
-.price {
-    text-align: right;
-    width: 50%;
-    float: right;
-}
-
-.editdeletepane {}
-
-.flash {
-    background: #cee5f5;
 }
