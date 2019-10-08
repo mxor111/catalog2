@@ -2,9 +2,11 @@
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask import flash, make_response
-from sqlalchemy import create_engine
+from flask import session as login_session
+from sqlalchemy import create_engine, asc
 from sqlalchemy.orm import sessionmaker
 from database_setup.py import Base, User, Item, Category
+
 
 
 app = Flask(__name__)

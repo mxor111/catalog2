@@ -3,10 +3,10 @@
 
 import os
 import sys
-from sqlalchemy import Column, ForeginKey, Integer, String
-from sqlalchemy ext.declarative import declarative_base
+from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemyimport create_engine
+from sqlalchemy import create_engine
 
 Base = declarative_base() # correspond to table in database
 #create classes to correspond with the tables
@@ -17,8 +17,8 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(250), nullable=False)
-    email = Column(String(250), nullable=False))
-    
+    email = Column(String(250), nullable=False)
+
 class Category(Base):
     """class to create table category"""
 
@@ -69,12 +69,6 @@ class Item(Base):
         }
 
 #add at end
-engine - create_engine(sqlite:///itemcatalog.db)
+engine = create_engine('sqlite:///itemcatalog.db')
 # creates a new database
 Base.metadata.create_all(engine)
-
-
-
-
-Base.metadata.create_all(engine)
-#goes into database and add class we will create
