@@ -2,14 +2,23 @@
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask import flash, make_response
-from flask import session as login_session
+from flask import session as login_session #stores values
 from sqlalchemy import create_engine, asc
 from sqlalchemy.orm import sessionmaker
 from database_setup.py import Base, User, Item, Category
+import random, string
 
-
+from oauth2client.client import flow_from_clientsecrets
+from oauth2client.client import FlowExchangeError
+import httplib2
+import json
+import requests
 
 app = Flask(__name__)
+
+CLIENT_ID = json.loads(
+    open('client-secrets.json', 'r').read())['web']['client_id']
+APPLICATION_NAME = "Catlaog Items App"
 
 #connect engine to database and create database session
 engine = create_engine('sqlite:///itemcatalog.db',
@@ -19,6 +28,146 @@ engine = create_engine('sqlite:///itemcatalog.db',
 DBSession = sessionmaker(bind=engine)
 #create session object
 session = DBSession()
+
+#route to login in page create token to prevent anti-forgery state token request #store it in session for later validation
+@app.route('/login')
+def showLogin():
+    state = ''.join(random.choice(string.ascii_uppercase + string.digits)
+                    for x in rante(32))
+    login_session['state'] = state
+    return render_template("login.html", STATE=state, cleint_id=CLIENT_ID)
+
+#connect to the google sign-in oAuth method
+app.route('/gconnect', methods=['POST'])
+def gconnect():
+    #validate token
+    if request.args.get('state') != login_session['state']:
+        response = make_response(json.dumps('Invalid state parameter.'), 401)
+        response.headers['Content-Type'] = 'application/json'
+        return make_response
+    #obtain authroization code
+    code = request.data
+
+    try:
+        #the authorization code into creditals object
+        oauth_flow = flow_from_clientsecrets('cleint_secrets.json', scope='')
+        oauth_flow.redirect_uri = 'postmessage'
+        credentials = oauth_flow.step2_exchange(code)
+    except: FlowExchangeError:
+        response = make_response(
+            json.dumps('Faile to upgrade the authorization code'), 401
+        )
+        response.headers['Content-Type'] = 'application/json'
+        return response
+
+    #check that the access token is valid
+    access_token = credentials.access_token
+    url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s'
+           % access_token)
+    h = httplib2.Http()
+    result = json.loads(h.request(url, 'GET')[1])
+    # If there was an error in the access token info, abort.
+    if result.get('error') is not None:
+        response = make_response(json.dumps(result.get('error')), 500)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+
+    # Verify that the access token is used for the intended user.
+    gplus_id = credentials.id_token['sub']
+    if result['user_id'] != gplus_id:
+        response = make_response(
+            json.dumps("Token's user ID doesn't match given use ID"), 401
+        )
+        response.headers['Content-Type'] = 'application/json'
+        return response
+
+    #verify the access token is valid for this app
+    if result['issued_to'] != CLIENT_ID:
+        response = make_response(
+            json.dumps("Token's client ID does not match app's."), 401)
+        print ("Token's client ID does not match app's.")
+        response.headers['Content-Type'] = 'application/json'
+        return response
+
+    stored_access_token = login_session.get('access_token')
+    stored_gplus_id = login_session.get('gplus_id')
+    if stored_access_token is not None and gplus_id == stored_gplus_id:
+        response = make_response(json.dumps('Current user is already connected.'),
+                                200)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+
+    #store the access toekn in the session for later user
+    login_session['access_token'] = credentials.access_token
+    login_session['gplus_id'] = gplus_id
+
+    #get user information
+    userinfo_url = "https://www.googleapis.com/oauth2/v1/userinfo"
+    params = {'access_token': credentials.access_token, 'alt': 'json'}
+    answer = requests.get(userinfo_url, params=params)
+
+    data = answer.json()
+
+    login_session['username'] = data['name']
+    login_session['picture'] = data['picture']
+    login_session['email'] = data['email']
+
+#show welcome screen upon login
+
+    output = ''
+    output += '<h1>Welcome, '
+    output += login_session['username']
+    output += '!</h1>'
+    output += '<img src="'
+    output += login_session['picture']
+    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
+    flash("You are now logged in as %s" % login_session['username'])
+    print ("done!")
+    return output
+
+#disconnect Google Account
+def gdisconnect():
+    #only disconnect the connected users
+    access_token = login_session.get('access_token')
+    if access_token is None:
+        response = make_response(
+            json.dumps('Current user not connected'), 401
+        )
+        response.headers['Content-Type'] = 'application/json'
+        return response
+
+    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s % access_token'
+    h = httplib2.Http()
+    result = h.request(url, 'GET')[0]
+
+    if result['status'] == '200':
+        response = make_response(json.dumps('Successfully disconnected.'), 200)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    else:
+        response = make_response(
+            json.dumps('Failed to revoke token for given user'), 400
+        )
+        response.headers['Content-Type'] = 'application/json'
+        return response
+
+# End session and log out current users
+app.route('/logout')
+def logout():
+
+    if 'username' in login_session:
+        gdisconnect()
+        del login_session['google_id']
+        del login_session['access_token']
+        del login_session['username']
+        del login_session['email']
+        del login_session['picture']
+        del login_session['user_id']
+        flash("You have been successfully logged out!")
+        return redirect(url_for('home'))
+    else:
+        flash("Please log out! You are not logged in!")
+        return redirect(url_for('home'))
 
 
 #redirect to Login in Page
@@ -38,7 +187,9 @@ def create_user(login_session):
 
     new_user = User(
         name=login_session['usename'],
+        picture=login_session['picture'],
         email=login_session['email'],
+
 
     )
 
@@ -61,10 +212,6 @@ def get_user_id(email):
         return user_id
     except:
         return None
-
-
-
-
 
 #add a new category
 @app.route('/catalog/catalog/new/', methods=['GET' , 'POST'])
@@ -273,6 +420,7 @@ def show_catalog_json():
     items = session.query(Item).order_by(Item_is.desc())
     return jsonify(catalog=[1.serialize for i in items])
 
+#retun JSOn of a particular item in catalog
 @app.route('/api/v1/catergories/<int:category_id>/item/<int:item_id>/JSON')
 def catalog_item_json(category_id, item_id):
     if exists_category(category_id) and exists_item(item_id):
@@ -291,5 +439,6 @@ def categories_json():
 
 
 if __name__ == "__main__":
+    app.secret_key = 'Dc2YRqHx88zKMVGj4SWxA0W-'
     app.debug = True
     app.run(host = '0.0.0.0.', port = 5000)
