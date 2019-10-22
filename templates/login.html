@@ -55,6 +55,72 @@ function signInCallBack(authResult) {
           }
       }
 }); } }
-</scrip>
+</script>
 
-{% endblock %}
+#!- -Facebook Sign in - ->
+<script>
+window.fbAsyncInit = function()
+fb.init({
+  app_id    : '402571510435852',
+  cookie    : true, //enable cookies to allow the server access
+                    // the session
+  xfbml     : true, // parse social plugins on this Page
+  version   : 'v2.2' // use version 2.2
+});
+
+};
+
+//Load the SDK Asynchrounously
+(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementsByTagName(id)) return;
+  js - d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/sdk.js";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook jssdk'));
+
+//Here we run a simple test of the graph API after login
+// sucessfull. see statuschangecallback for when this call is made
+function sendTokenToServer() {
+  var access_token = FB.getAuthResponse() ['accessToken'];
+  console.log(access_token)
+  console.log('Welcome! Gathering your Information....');
+  FB.api('/me', function(response) {
+    console.log('Successful login in for: ' + response.name);
+    $.ajax({
+      type: 'POST',
+      url: '/fbconnect?state={{STATE}}',
+      processDate: false,
+      data: access_token,
+      contentType: 'application/octet-stream; charset=utf-8',
+      success: function(result) {
+        //handle or verify the server response
+        if (result) {
+          $('#result').html('Login Sucessful!</br>' + result + '</br>Redirecting...')
+          setTimeout(function() {
+            window.location.href = "/";
+          } 5000;
+
+      } else {
+        $('#result').html('Failed to make a server-side call. Check your configuration and console');
+        }
+
+      }
+
+}); });
+}}
+
+</script>
+
+<button>
+
+        <fb:login-button scope="public_profile,email" onlogin="sendTokenServer();">
+<a href='javascript:sendTokenToServer()'>Login with Facebook</a>
+
+</fb:login-button>
+
+        </button>
+
+    </body>
+
+    </html>

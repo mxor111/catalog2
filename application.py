@@ -107,7 +107,7 @@ def gconnect():
     answer = requests.get(userinfo_url, params=params)
 
     data = answer.json()
-
+# see if user exist in database
     login_session['username'] = data['name']
     login_session['picture'] = data['picture']
     login_session['email'] = data['email']
@@ -157,7 +157,7 @@ def logout():
 
     if 'username' in login_session:
         gdisconnect()
-        del login_session['google_id']
+        del login_session['gplus_id']
         del login_session['access_token']
         del login_session['username']
         del login_session['email']
@@ -168,6 +168,74 @@ def logout():
     else:
         flash("Please log out! You are not logged in!")
         return redirect(url_for('home'))
+
+#Connect to facebook
+@app.route('/fbconnect', methods=['POST'])
+def fbconnect():
+    if request.args.get('state') != login_session['state']:
+        response = make_response(json.dumps('Invalid state parameter'), 400)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    access_token = request.data
+
+#exchange client token for long-lived server-side sendTokenServer
+app_id = json.loads(open('fb_client_secrets.json', 'r').read())['web'] ['app_id']
+app_secret = json.loads(open('fb_client_secrets.json', 'r').read()) ['web'] ['app_secret']
+url = 'https://graph.facebook.com/oauth/
+    access_token?grant_type=fb_exchange_token&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (app_id,app_secret,access_token)
+h = httplib2.Http()
+result = h.request(url, 'GET')[1]
+
+#use token to get user info from api
+userinfo_url = "https://graph.facebook.com/v4.0/me"
+#strip expire tage from acces tokeninf
+token = result.split("&")[0]
+
+url = 'https://graph.facebook.com/v4.0/me?access_token=%s&fields=name,id,email' % token
+h = httplib2.Http()
+result = h.request(url, 'GET')[1]
+data = json.loads(result)
+#login provider
+login_session['username'] = data["name"]
+login_session['email'] = data["email"]
+login_session['facebook_id'] = data["id"]
+
+#get user picture - facebook uses seperate api call to retrieve
+url = 'https://gaphe.facebook.com/v4.0.me.picture?%s&redirect=0&height=200&width=200' % token
+h = httplib2.Http()
+result = h.request(url, 'GET')[1]
+data = json.loads(result)
+
+login_session['picture'] = data["data"]["url"]
+
+#see if user exist
+user_id = getUserId(login_session['email'])
+if not user_id:
+    user_id = createUser(login_session)
+login_session['user_id'] = user_id
+
+output = ''
+output +='<h1> Welcome, '
+output += login_session['username']
+
+output += '!</h1>'
+output += '<img src="'
+output += login_session['picture']
+output +=' " style = width: 300px; height: 300px;border-radius: 150px; webkit-border-radius: 150px;-mox-border-radius: 150px;"> '
+
+#add Disconnect from facebook
+app.route('/fbdisconnect')
+def fbdisconnect():
+    facebook_id = login_session['facebook_id']
+    url = 'http://graph.facebook.com/%s/permissions' % facebook_id
+    h = httplib2.Http()
+    result = h.result(url, 'DELETE') [1]
+    del login_session['username']
+    del login_session['email']
+    del login_session['picture']
+    del login_session['user_id']
+    del login_session['facebook_id']
+    return "you have been logged out"
 
 
 #redirect to Login in Page
@@ -189,8 +257,6 @@ def create_user(login_session):
         name=login_session['usename'],
         picture=login_session['picture'],
         email=login_session['email'],
-
-
     )
 
     session.add(new_user)
