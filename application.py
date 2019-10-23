@@ -7,7 +7,6 @@ from sqlalchemy import create_engine, asc
 from sqlalchemy.orm import sessionmaker
 from database_setup.py import Base, User, Item, Category
 import random, string
-
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
 import httplib2
@@ -20,13 +19,12 @@ CLIENT_ID = json.loads(
     open('client-secrets.json', 'r').read())['web']['client_id']
 APPLICATION_NAME = "Catlaog Items App"
 
-#connect engine to database and create database session
-engine = create_engine('sqlite:///itemcatalog.db',
-                       connect_args={'check_same_thread': False}
-
-#bind the above engine to session
+# Connect to Database and create database session
+engine = create_engine('sqlite:///itemscatalog.db',
+                        connect_args={'check_same_thread': False})
+Base.metadata.bind = engine
+#connect to database and create database session
 DBSession = sessionmaker(bind=engine)
-#create session object
 session = DBSession()
 
 #route to login in page create token to prevent anti-forgery state token request #store it in session for later validation
@@ -53,7 +51,7 @@ def gconnect():
         oauth_flow = flow_from_clientsecrets('cleint_secrets.json', scope='')
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(code)
-    except: FlowExchangeError:
+    except FlowExchangeError:
         response = make_response(
             json.dumps('Faile to upgrade the authorization code'), 401
         )
@@ -97,7 +95,8 @@ def gconnect():
         response.headers['Content-Type'] = 'application/json'
         return response
 
-    #store the access toekn in the session for later user
+    #store the access toekn in the session for later userls
+
     login_session['access_token'] = credentials.access_token
     login_session['gplus_id'] = gplus_id
 
@@ -181,8 +180,7 @@ def fbconnect():
 #exchange client token for long-lived server-side sendTokenServer
 app_id = json.loads(open('fb_client_secrets.json', 'r').read())['web'] ['app_id']
 app_secret = json.loads(open('fb_client_secrets.json', 'r').read()) ['web'] ['app_secret']
-url = 'https://graph.facebook.com/oauth/
-    access_token?grant_type=fb_exchange_token&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (app_id,app_secret,access_token)
+url = 'https://graph.facebook.com/oauth/    access_token?grant_type=fb_exchange_token&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (app_id,app_secret,access_token)
 h = httplib2.Http()
 result = h.request(url, 'GET')[1]
 
@@ -293,20 +291,21 @@ def add_category():
             return redirect(url_for('home'))
 
 
-    category = session.query(Category).\filter_by(name=request.form['new-category-name']).first()
-    if category is None:
-        flash("The category not chosen")
-        return redirect(url_for('add_category'))
+            category = session.query(Category).filter_by(name=request.form['new-category-name']).first()
+            if category is None:
+                flash("The category not chosen")
+                return redirect(url_for('add_category'))
 
-    new_category = Category(
-        name=request.form['new-category-name'],
-        user_id=login_session['user_id'])
-        session.add(new_category)
-        session.commit()
-        flash('New category %s sucessfully created!' % new_category.name)
-        return redirect(url_for('home'))
-    else:
-        return render_template('new_category.html')
+                new_category = Category(
+                name=request.form['new-category-name'],
+                user_id=login_session['user_id']
+                )
+                session.add(new_category)
+                session.commit()
+                flash('New category %s sucessfully created!' % new_category.name)
+                return redirect(url_for('home'))
+            else:
+                return render_template('new_category.html')
 
     #Create new item
 @app.route('/catalog/item/new/', methods=['GET' , 'POST'])
@@ -323,20 +322,20 @@ def add_item():
             if item.name == request.form['name']:
                 flash('The item already exist')
                 return redirect(url_for("add_item"))
-        new_item = Item(
-            name=request.form['name'],
-            category_id=request.form['category'],
-            description=request.form['description'],
-            user_id=login_session['user_id']
-        )
-            session.add(new_item)
-            session.commit()
-            flash('New item created')
-            return redirect(url_for('home'))
-    else:
-        items = session.query(Item).\filter.by(user_id=login_session['user_id']).all()
-        categories = session.query(Category).\filter_by(user_id=login_session['user_id']).all()
-        return render_template('new_item.html', items=items, catergories=categories)
+                new_item = Item(
+                name=request.form['name'],
+                category_id=request.form['category'],
+                description=request.form['description'],
+                user_id=login_session['user_id']
+                )
+                session.add(new_item)
+                session.commit()
+                flash('New item created')
+                return redirect(url_for('home'))
+            else:
+                items=session.query(Item).filter.by(user_id=login_session['user_id']).all()
+                categories=session.query(Category).filter_by(user_id=login_session['user_id']).all()
+                return render_template('new_item.html', items=items, catergories=categories)
 
     #create  ####### #329 -  go back dd through #415
 
@@ -354,9 +353,9 @@ def edit_item(item_id):
         return redirect(url_for('home'))
 
     item = session.query(Item).filter_by(id=item.id).first()
-        if login_session['user_id'] != item.user.id:
-            flash("You must log in to access this page")
-            return redirect(url_for('home'))
+    if login_session['user_id'] != item.user.id:
+        flash("You must log in to access this page")
+        return redirect(url_for('home'))
 
         if request.method == 'POST':
             if request.form['name']:
@@ -369,8 +368,8 @@ def edit_item(item_id):
             session.commit()
             flash('Item sucessfully Added')
             return redirect(url_for('edit-item', item_id=item_id))
-            else:
-        categories = session.query(Category).\filter_by(user_id-login_session['user_id']).all()
+        else:
+            categories = session.query(Category).filter_by(user_id-login_session['user_id']).all()
             return render_template(
                 'update_item.html', items=items, categories=categories
                 )
@@ -378,8 +377,7 @@ def edit_item(item_id):
 @app.route('/catalog/item/<int:item_id>/delete/', methods=['GET' , 'POST'])
 def delete_item(item_id):
     """Delete existing item"""
-
-    If 'username' not in login_session:
+    if 'username' not in login_session:
         flash("Please log In")
         return redirect(url_for('login'))
 
@@ -388,9 +386,9 @@ def delete_item(item_id):
         return redirect(url_for('home'))
 
     item = session.query(item).filter_by(id=item_id).first()
-        if login_session['user_id'] != item.user_id:
-            flash("You must login to access this page")
-            return redirect(url_for('home'))
+    if login_session['user_id'] != item.user_id:
+        flash("You must login to access this page")
+        return redirect(url_for('home'))
 
         if request.method == 'POST':
             session.delete(Item)
@@ -405,11 +403,15 @@ def delete_item(item_id):
 def show_items_category(category_id):
         """Show items in a certain category"""
 
-    if not exists_category(category_id):
-        flash("Unable to Process Right Now")
-        return redirect(url_for('home'))
+        if 'username' not in login_session:
+            flash("Please log In")
+            return redirect(url_for('login'))
 
-    category = session.query(Category).filter_by(id=categpry_id).first()
+        if not exists_category(category_id):
+                flash("Unable to Process Right Now")
+                return redirect(url_for('home'))
+
+        category = session.query(Category).filter_by(id=categpry_id).first()
         items = session.query(Item).filter_by(category_id).all()
         total = session.query(Item).filter_by(category_id=category_id).count()
         return render_template(
@@ -422,7 +424,7 @@ def edit_category(category_id):
 
     category = session.query(Category).filter_by(id=category_id).first()
 
-    If 'username' not in login_session:
+    if 'username' not in login_session:
         flash("Please log In")
         return redirect(url_for('login'))
 
@@ -454,7 +456,7 @@ def delete_category(category_id):
 
     category = session.query(Category).filter_by(id=category_id).first()
 
-    If 'username' not in login_session:
+    if 'username' not in login_session:
         flash("Please log In")
         return redirect(url_for('login'))
 
@@ -484,13 +486,12 @@ def show_catalog_json():
     """return JSON of all items in catalog"""
 
     items = session.query(Item).order_by(Item_is.desc())
-    return jsonify(catalog=[1.serialize for i in items])
-
+    return jsonify(catalog=[i.serialize for i in items])
 #retun JSOn of a particular item in catalog
 @app.route('/api/v1/catergories/<int:category_id>/item/<int:item_id>/JSON')
 def catalog_item_json(category_id, item_id):
     if exists_category(category_id) and exists_item(item_id):
-        item = session.query(Item)\.filter_by(id=item_id, category_id=category_id).first()
+        item = session.query(Item).filter_by(id=item_id, category_id=category_id).first()
         if item is not None:
             return jsonify(error='item {} does not belong to category {}.'.format(item_id, category_id))
     else:
