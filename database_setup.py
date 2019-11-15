@@ -67,7 +67,6 @@ class Item(Base):
             'category_id': self.category_id
         }
 
-#add at end
+#add at end  # creates a new database
 engine = create_engine('sqlite:///itemcatalog.db')
-# creates a new database
 Base.metadata.create_all(engine)
