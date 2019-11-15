@@ -1,5 +1,5 @@
 #!usr/bin/env python 3
-#this modules contains all the routes for the functioning
+# this modules contains all the routes for the functioning
 
 from flask import Flask, render_template, request, redirect, jsonify, url_for
 from flask import flash, make_response
@@ -28,6 +28,7 @@ Base.metadata.bind = engine
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
+
 @app.route('/')
 @app.route('catalog')
 @app.route('catalog/items/')
@@ -46,8 +47,11 @@ def showLogin():
     login_session['state'] = state
     return render_template("login.html", STATE=state, cleint_id=CLIENT_ID)
 
+
 # connect to the google sign-in oAuth method
 app.route('/gconnect', methods=['POST'])
+
+
 def gconnect():
     # validate token
     if request.args.get('state') != login_session['state']:
@@ -83,7 +87,8 @@ def gconnect():
     # Verify that the access token is used for the intended user.
     gplus_id = credentials.id_token['sub']
     if result['user_id'] != gplus_id:
-        response = make_response(json.dumps("Token's user ID doesn't match given use ID"), 401)
+        response = make_response(json.dumps(
+            "Token's user ID doesn't match given use ID"), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -122,13 +127,15 @@ def gconnect():
 # show welcome screen upon login
 
     output = ''
-    output += '<h1>Welcome, '
+    output += '<h2>Welcome, '
     output += login_session['username']
-    output += '!</h1>'
+    output += '!</h2>'
     output += '<img src="'
     output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
-    flash("You are now logged in as %s" % login_session['username'])
+    output += ' " style = "width: 300px; height: 300px; '
+    output += 'border-radius: 150px;'
+    output += '-webkit-border-radius: 150px;-moz-border-radius: 150px;">'
+    flash("You are now logged in as %s!" % login_session['username'])
     print("done!")
     return output
 
@@ -161,22 +168,25 @@ def gdisconnect():
 
 # End session and log out current users
 app.route('/logout')
+
+
 def logout():
     """Log out the currently connected user."""
 
     if 'username' in log_session
-        gbdisconnect()
-        del login_session['gplus_id']
-        del login_session['access_token']
-        del login_session['username']
-        del login_session['email']
-        del login_session['picture']
-        del login_session['user_id']
-        flash("You have been successfully logged out!")
-        return redirect(url_for('home'))
+    gbdisconnect()
+    del login_session['gplus_id']
+    del login_session['access_token']
+    del login_session['username']
+    del login_session['email']
+    del login_session['picture']
+    del login_session['user_id']
+    flash("You have been successfully logged out!")
+    return redirect(url_for('home'))
     else:
         flash("Please log out! You are not logged in!")
         return redirect(url_for('home'))
+
 
 def create_user(login_session):
     """"create a new use login_session (dict): The login session"""
@@ -191,11 +201,13 @@ def create_user(login_session):
     user = session.query(User).filter_by(email=login_session['email']).one()
     return user.id
 
+
 def get_user_info(user_id):
     """get user information by user_id the user id and returns users details"""
 
     user = session.query(User).filter_by(id=user_id).one()
     return user
+
 
 def get_user_id(email):
     """get user id by email  -email(str): the email of the user"""
@@ -203,8 +215,6 @@ def get_user_id(email):
     try:
         user = session.query(User).filter_by(email=email).one()
         return user.id
-    except:
-        return None
 
 # add a new category
 @app.route("/catalog/category/new/", methods=['GET', 'POST'])
@@ -262,16 +272,16 @@ def add_item():
         return redirect(url_for('home'))
     else:
         items = session.query(Item).\
-                filter.by(user_id=login_session['user_id']).all()
+            filter.by(user_id=login_session['user_id']).all()
         categories = session.query(Category).
-                filter.by(user_id=login_session['user_id']).all()
+        filter.by(user_id=login_session['user_id']).all()
         return render_template(
-                'new_item.html',
-                 items=items,
-                 catergories=categories
+            'new_item.html',
+            items=items,
+            catergories=categories
         )
 
-#edit existing items
+# edit existing items
 @app.route("/catalog/item/<int:item_id>/edit/", methods=['GET', 'POST'])
 def edit_item(item_id):
     """edit existing item"""
@@ -303,13 +313,13 @@ def edit_item(item_id):
     else:
         categories = session.query(Category).\
             filter_by(user_id=login_session['user_id']).all()
-            return render_template(
-                'update_item.html',
-                item=item,
-                categories=categories
-            )
+        return render_template(
+            'update_item.html',
+            item=item,
+            categories=categories
+        )
 
-#delete existing items
+# delete existing items
 @app.route("/catalog/item/<int:item_id>/delete/", methods=['GET', 'POST'])
 def delete_item(item_id):
     """Delete existing item"""
@@ -336,10 +346,9 @@ def delete_item(item_id):
         return render_template('delete.html', item=item)
 
 
-
 # Show items in certain category
 @app.route("/catalog/category/<int:category_id>/items/",
-            methods=['GET', 'POST'])
+           methods=['GET', 'POST'])
 def show_items_in_category(category_id):
     """Show items in a certain category"""
 
@@ -360,7 +369,7 @@ def show_items_in_category(category_id):
 
 # Edit a category
 @app.route("/catalog/category/<int:category_is>/edit/",
-            methods=['GET', 'POST'])
+           methods=['GET', 'POST'])
 def edit_category(category_id):
     """edit a category"""
 
@@ -374,8 +383,7 @@ def edit_category(category_id):
         flash("Unable to Process Right Now")
         return redirect(url_for('home'))
 
-
-    # if logged in user does not have authorization to edit the category redirect
+    # logged in user does not have authorization to edit the category redirect
     if login_session['user_id'] != category.user_id:
         flash("Unable to Process your request Right Now")
         return redirect(url_for('home'))
@@ -385,16 +393,16 @@ def edit_category(category_id):
                 category.name = request.form['name']
         session.add(category)
         session.commit()
-            flash('Category updated sucessfully')
-            return redirect(url_for('show_items_in_category',
-                                    category_id=category.id))
+        flash('Category updated sucessfully')
+        return redirect(url_for('show_items_in_category',
+                                category_id=category.id))
 
     else:
         return render_template('edit_category.html', category=category)
 
 # delete a category
 @app.route("/catalog/category/<int:category_id>/delete/",
-            methods=['GET', 'POST'])
+           methods=['GET', 'POST'])
 def delete_category(category_id):
     """Delete a category"""
 
@@ -408,8 +416,7 @@ def delete_category(category_id):
         flash("Unable to Process Right Now")
         return redirect(url_for('home'))
 
-
-    # if logged in user does not have authorization to edit the category redirect
+    # logged in user does not have authorization to edit the category redirect
     if login_session['user_id'] != category.user_id:
         flash("Unable to Process your request Right Now")
         return redirect(url_for('home'))
@@ -439,11 +446,14 @@ def catalog_item_json(category_id, item_id):
 
     if exists_category(category_id) and exists_item(item_id):
         item = session.query(Item)\
-                .filter_by(id=item_id, category_id=category_id).first()
+            .filter_by(id=item_id, category_id=category_id).first()
         if item is not None:
             return jsonify(item=item.serialize)
+
         else:
-            return jsonify(error='item {} does not belong to category {}.'.format(item_id, category_id))
+            return jsonify(
+                error='item {} does not belong to category {}.'
+                .format(item_id, category_id))
     else:
         return jsonify(error='The item or the category does not exist')
 
